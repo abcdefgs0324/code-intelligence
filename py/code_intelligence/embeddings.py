@@ -8,6 +8,7 @@ import pandas as pd
 from code_intelligence.inference import InferenceWrapper
 from pathlib import Path
 from urllib import request as request_url
+from scipy.spatial.distance import cosine as cosine_distance
 import logging
 
 
@@ -136,6 +137,39 @@ def load_model_artifact(model_url):
         request_url.urlretrieve(model_url, path/'model.pkl')
     return InferenceWrapper(model_path=path, model_file_name='model.pkl')
 
+def detect_duplicate_issues(cosine_threshold, issue_embedding, all_issue_embeddings):
+    """
+    Detect if the current issue is a duplicate by checking cosine similarity of embeddings.
+    Args:
+      cosine_threshold: float, threshold for cosine similarity that two issues will be duplicates
+      issue_embedding: array-like, embedding of current issue
+      all_issue_embeddings: list of list, embeddings of all previous issues
+
+    Return
+    ------
+    list
+        a list of tuples including issue indexes and the similarities
+    """
+    duplicate_list = []
+    for i in range(len(all_issue_embeddings)):
+        current_cosine_similarity = cosine_similarity(issue_embedding, all_issue_embeddings[i])
+        if current_cosine_similarity >= cosine_threshold:
+            duplicate_list.append((i, current_cosine_similarity))
+    return duplicate_list
+
+def cosine_similarity(embedding1, embedding2):
+    """
+    Calculate the cosine similarity of two embeddings.
+    Args:
+      embedding1: array-like
+      embedding2: array-like
+
+    Return
+    ------
+    float
+        cosine similarity
+    """
+    return 1 - cosine_distance(embedding1, embedding2)
 
 if __name__ == '__main__':
     test = get_all_issue_text(owner='kubeflow', repo='examples',
